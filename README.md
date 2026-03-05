@@ -48,7 +48,9 @@ Set the following environment variables:
 | `BLOG_TOPIC` | `General` | Comma-separated topics (e.g. `AI, Cloud Computing, DevOps`) |
 | `GRADIENT_MODEL_ACCESS_KEY` | | DigitalOcean Gradient model access key (required) |
 | `GRADIENT_MODEL` | `anthropic-claude-4.6-sonnet` | LLM model to use |
-| `BLOGS_PER_DAY` | `1` | Number of autonomous posts per day (0 to disable scheduler) |
+| `BLOGS_PER_DAY` | `1` | Number of autonomous posts per day (0-24, 0 to disable scheduler) |
+| `GW_API_KEY` | | Optional API key for endpoint authentication (see Security below) |
+| `GW_RATE_LIMIT` | `20` | Max POST requests per IP per minute |
 
 ### API Key Formats
 
@@ -72,9 +74,9 @@ ENABLE_CHAT=true docker compose up --build
 ## Running Locally
 
 ```bash
-cd ghost-writer/src
-pip install -r ../requirements.txt
-python __main__.py
+cd ghost-writer
+pip install -e .
+python src/__main__.py
 ```
 
 The UI is available at `http://localhost:8000`.
@@ -99,6 +101,14 @@ python src/__main__.py chat
 
 ## API
 
+When `GW_API_KEY` is set, `POST /` and `GET /status` require a `Bearer` token:
+
+```
+Authorization: Bearer <your-GW_API_KEY>
+```
+
+Unauthenticated requests to protected endpoints return `401 Unauthorized`. The `GET /` UI page is always accessible so users can enter their key through the browser prompt.
+
 ### Status
 
 `GET /status` returns the current configuration, chat mode state, and scheduler status.
@@ -121,6 +131,16 @@ POST /
 ```
 
 Returns a 403 error if `ENABLE_CHAT` is not `true`.
+
+## Security
+
+- **Authentication** -- Set `GW_API_KEY` to require a Bearer token on `POST /` and `GET /status`. Strongly recommended for any non-local deployment.
+- **Rate limiting** -- POST requests are limited to `GW_RATE_LIMIT` per IP per minute (default 20).
+- **Input limits** -- Chat messages are capped at 50,000 characters.
+- **Security headers** -- Responses include `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy`.
+- **Non-root container** -- The Docker image runs as an unprivileged `appuser`.
+
+For production deployments, place the service behind a TLS-terminating reverse proxy (nginx, Caddy, Traefik) and always set `GW_API_KEY`.
 
 ## Architecture
 

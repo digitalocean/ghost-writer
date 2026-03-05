@@ -1,8 +1,10 @@
 import logging
 import uuid
 import os
+import time
 import click
 import uvicorn
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Any, Dict, Union, Literal
 
@@ -22,6 +24,81 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ghost-writer")
 
 app = FastAPI()
+
+
+def _get_api_key() -> str:
+    return os.getenv("GW_API_KEY", "")
+
+
+class _RateLimiter:
+    """Simple in-memory sliding-window rate limiter per client IP."""
+
+    def __init__(self, max_requests: int = 20, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window = window_seconds
+        self._hits: Dict[str, list] = defaultdict(list)
+
+    def is_allowed(self, key: str) -> bool:
+        now = time.monotonic()
+        timestamps = self._hits[key]
+        self._hits[key] = [t for t in timestamps if now - t < self.window]
+        if len(self._hits[key]) >= self.max_requests:
+            return False
+        self._hits[key].append(now)
+        return True
+
+
+_rate_limiter = _RateLimiter(
+    max_requests=int(os.getenv("GW_RATE_LIMIT", "20")),
+    window_seconds=60,
+)
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.method == "POST":
+        client_ip = request.client.host if request.client else "unknown"
+        if not _rate_limiter.is_allowed(client_ip):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Try again later."},
+            )
+    response = await call_next(request)
+    return response
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'"
+    )
+    return response
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    """Require Bearer token on protected endpoints when GW_API_KEY is set."""
+    api_key = _get_api_key()
+    if api_key:
+        protected = (
+            request.method == "POST"
+            or request.url.path == "/status"
+        )
+        if protected:
+            auth = request.headers.get("Authorization", "")
+            if auth != f"Bearer {api_key}":
+                return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    response = await call_next(request)
+    return response
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
@@ -130,7 +207,12 @@ async def startup_event():
     if blog_url:
         logger.info(f"Blog: {blog_url}")
 
-    blogs_per_day = int(os.getenv("BLOGS_PER_DAY", "1"))
+    try:
+        blogs_per_day = int(os.getenv("BLOGS_PER_DAY", "1"))
+    except ValueError:
+        logger.warning("Invalid BLOGS_PER_DAY value, defaulting to 1")
+        blogs_per_day = 1
+    blogs_per_day = max(0, min(blogs_per_day, 24))
     if blogs_per_day > 0:
         interval_hours = 24.0 / blogs_per_day
         scheduler.add_job(
@@ -200,7 +282,7 @@ async def handle_rpc(request: JsonRpcRequest):
                 if part.kind == "text" and part.text:
                     input_text += part.text
 
-            logger.info(f"Received message: {input_text}")
+            logger.info(f"Received message ({len(input_text)} chars): {input_text[:80]}...")
 
             response_text = agent.process_message(input_text)
 
@@ -223,7 +305,7 @@ async def handle_rpc(request: JsonRpcRequest):
 
         except Exception as e:
             logger.error(f"Error processing message: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail="Internal server error")
     else:
         raise HTTPException(
             status_code=404, detail=f"Method {request.method} not found"

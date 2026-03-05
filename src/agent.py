@@ -24,13 +24,13 @@ logger = logging.getLogger("ghost-writer")
 class LoggingCallback(BaseCallbackHandler):
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs) -> None:
         tool_name = serialized.get("name", "unknown")
-        logger.info(f"Tool call: {tool_name} | Input: {input_str[:200]}")
+        logger.info(f"Tool call: {tool_name} | Input length: {len(input_str)}")
 
     def on_tool_end(self, output: str, **kwargs) -> None:
-        logger.info(f"Tool result: {output[:300]}...")
+        logger.info(f"Tool result ({len(output)} chars)")
 
     def on_tool_error(self, error: Exception, **kwargs) -> None:
-        logger.error(f"Tool error: {error}")
+        logger.error(f"Tool error: {type(error).__name__}")
 
 
 class DraftCaptureCallback(BaseCallbackHandler):
@@ -238,7 +238,7 @@ class Agent:
     def process_message(self, message_text: str) -> str:
         """Process an interactive chat message."""
         try:
-            logger.info(f"Chat message: {message_text}")
+            logger.info(f"Chat message ({len(message_text)} chars)")
             result = self.chat_executor.invoke({
                 "input": message_text,
                 "chat_history": self.chat_history,

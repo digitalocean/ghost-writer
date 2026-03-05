@@ -13,7 +13,7 @@ class JsonRpcRequest(BaseModel):
 
 class MessagePart(BaseModel):
     kind: str
-    text: Optional[str] = None
+    text: Optional[str] = Field(default=None, max_length=50000)
 
 class Message(BaseModel):
     role: str

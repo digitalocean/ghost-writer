@@ -307,6 +307,10 @@
         const typingIndicator = document.getElementById('typingIndicator');
         const suggestions = document.getElementById('suggestions');
 
+        function getApiKey() {
+            return localStorage.getItem('gw_api_key') || '';
+        }
+
         function addMessage(content, type) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message ' + type;
@@ -327,6 +331,7 @@
         }
 
         function formatMarkdown(text) {
+            text = escapeHtml(text);
             return text
                 .replace(/^### (.+)$/gm, '<h3>$1</h3>')
                 .replace(/^## (.+)$/gm, '<h2>$1</h2>')
@@ -336,7 +341,7 @@
                 .replace(/`([^`]+)`/g, '<code>$1</code>')
                 .replace(/^- (.+)$/gm, '<li>$1</li>')
                 .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-                .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+                .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
                 .replace(/\n\n/g, '</p><p>')
                 .replace(/\n/g, '<br>');
         }
@@ -362,9 +367,13 @@
             setLoading(true);
 
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                const apiKey = getApiKey();
+                if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+
                 const response = await fetch('/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({
                         jsonrpc: '2.0',
                         id: Date.now().toString(),
@@ -378,6 +387,15 @@
                     })
                 });
 
+                if (response.status === 401) {
+                    const key = prompt('API key required. Enter your GW_API_KEY:');
+                    if (key) {
+                        localStorage.setItem('gw_api_key', key);
+                        setLoading(false);
+                        return sendMessage(message);
+                    }
+                    throw new Error('Authentication required');
+                }
                 if (!response.ok) throw new Error('HTTP ' + response.status);
 
                 const data = await response.json();

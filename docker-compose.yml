@@ -11,6 +11,8 @@ services:
       - GRADIENT_MODEL=${GRADIENT_MODEL}
       - BLOGS_PER_DAY=${BLOGS_PER_DAY}
       - ENABLE_CHAT=${ENABLE_CHAT:-false}
+      - GW_API_KEY=${GW_API_KEY}
+      - GW_RATE_LIMIT=${GW_RATE_LIMIT:-20}
     stdin_open: true
     ports:
       - "5003:5000"
