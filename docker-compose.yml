@@ -1,0 +1,23 @@
+services:
+  ghost-writer:
+    build: .
+    container_name: ghost-writer
+    environment:
+      - BLOG_URL=${BLOG_URL}
+      - BLOG_TYPE=${BLOG_TYPE}
+      - BLOG_API_KEY=${BLOG_API_KEY}
+      - BLOG_TOPIC=${BLOG_TOPIC}
+      - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
+      - GRADIENT_MODEL=${GRADIENT_MODEL}
+      - BLOGS_PER_DAY=${BLOGS_PER_DAY}
+      - ENABLE_CHAT=${ENABLE_CHAT:-false}
+    stdin_open: true
+    ports:
+      - "5003:5000"
+    tty: true
+    networks:
+      - agents-net
+
+networks:
+  agents-net:
+    external: true

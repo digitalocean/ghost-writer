@@ -1,0 +1,47 @@
+{
+    "protocolVersion": "0.2.9",
+    "name": "Ghost Writer Agent",
+    "description": "An autonomous ghost writer that researches topics, writes articles, and publishes to Ghost or WordPress. Supports interactive brainstorming via chat and scheduled autonomous posting.",
+    "url": "http://localhost:5003/",
+    "preferredTransport": "JSONRPC",
+    "provider": {
+        "organization": "Nasiko AI Projects",
+        "url": "https://github.com/ashishsharma/nasiko"
+    },
+    "iconUrl": "http://localhost:5003/icon.png",
+    "version": "1.0.0",
+    "documentationUrl": "http://localhost:5003/docs",
+    "capabilities": {
+        "streaming": false,
+        "pushNotifications": false,
+        "stateTransitionHistory": true,
+        "chat_agent": true
+    },
+    "securitySchemes": {},
+    "security": [],
+    "defaultInputModes": [
+        "text/plain"
+    ],
+    "defaultOutputModes": [
+        "text/plain"
+    ],
+    "skills": [
+        {
+            "id": "ghost-writing",
+            "name": "Ghost Writing",
+            "description": "Research topics, write blog posts, and publish to Ghost or WordPress"
+        },
+        {
+            "id": "topic-brainstorming",
+            "name": "Topic Brainstorming",
+            "description": "Brainstorm and discuss blog post ideas interactively"
+        },
+        {
+            "id": "web-research",
+            "name": "Web Research",
+            "description": "Search the web for research material on any topic"
+        }
+    ],
+    "supportsAuthenticatedExtendedCard": false,
+    "signatures": []
+}

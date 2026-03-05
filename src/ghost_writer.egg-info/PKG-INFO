@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: ghost-writer
+Version: 0.1.0
+Summary: Autonomous AI blog writer with TUI chat interface
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.109.0
+Requires-Dist: uvicorn>=0.27.0
+Requires-Dist: pydantic>=2.6.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: langchain<0.3.0,>=0.2.0
+Requires-Dist: langchain-openai<0.2.0,>=0.1.0
+Requires-Dist: duckduckgo-search>=6.1.0
+Requires-Dist: APScheduler>=3.10.0
+Requires-Dist: PyJWT>=2.8.0
+Requires-Dist: click>=8.1.7
+Requires-Dist: textual>=0.70.0

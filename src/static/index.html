@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghost Writer Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: #fff;
+            padding: 20px 24px;
+        }
+
+        .chat-header h1 {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .chat-header p {
+            font-size: 0.85rem;
+            opacity: 0.75;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.55;
+            font-size: 0.95rem;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.agent .message-content {
+            background: #fff;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.agent .message-content h1,
+        .message.agent .message-content h2,
+        .message.agent .message-content h3 {
+            margin: 12px 0 6px 0;
+            color: #1a1a2e;
+        }
+
+        .message.agent .message-content h1 { font-size: 1.3rem; }
+        .message.agent .message-content h2 { font-size: 1.15rem; }
+        .message.agent .message-content h3 { font-size: 1.05rem; }
+
+        .message.agent .message-content p {
+            margin: 8px 0;
+        }
+
+        .message.agent .message-content ul,
+        .message.agent .message-content ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .message.agent .message-content pre {
+            background: #f1f3f5;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 0.88rem;
+        }
+
+        .message.agent .message-content code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.88rem;
+        }
+
+        .message.agent .message-content blockquote {
+            border-left: 3px solid #0f3460;
+            padding-left: 12px;
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .message.system .message-content {
+            background: #e8f4f8;
+            color: #1a5276;
+            max-width: 100%;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .message.error .message-content {
+            background: #fde8e8;
+            color: #922;
+            max-width: 100%;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 14px 18px;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            width: fit-content;
+            margin-bottom: 16px;
+        }
+
+        .typing-indicator.active { display: block; }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .suggestions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .suggestion-chip {
+            padding: 8px 16px;
+            background: #fff;
+            border: 2px solid #0f3460;
+            color: #0f3460;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .suggestion-chip:hover {
+            background: #0f3460;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 52, 96, 0.3);
+        }
+
+        .chat-input-container {
+            padding: 16px 20px;
+            background: #fff;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #0f3460;
+        }
+
+        .send-button {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(15, 52, 96, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Ghost Writer Agent</h1>
+            <p>Brainstorm ideas, write posts, and publish to your blog</p>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message system">
+                <div class="message-content">
+                    Welcome! I'm your ghost writing assistant. You can suggest topics, brainstorm ideas with me, or ask me to write a post. I'll show you a draft before publishing anything.
+                </div>
+            </div>
+            <div class="suggestions" id="suggestions">
+                <div class="suggestion-chip" onclick="sendSuggestion('I have a topic idea I\'d like to discuss')">
+                    I have a topic idea
+                </div>
+                <div class="suggestion-chip" onclick="sendSuggestion('Brainstorm some blog post ideas for me')">
+                    Brainstorm ideas
+                </div>
+                <div class="suggestion-chip" onclick="sendSuggestion('What should I write about next?')">
+                    What should I write?
+                </div>
+            </div>
+            <div class="typing-indicator" id="typingIndicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <form class="chat-input-form" id="chatForm">
+                <input
+                    type="text"
+                    class="chat-input"
+                    id="messageInput"
+                    placeholder="Suggest a topic, discuss ideas, or ask me to write..."
+                    autocomplete="off"
+                >
+                <button type="submit" class="send-button" id="sendButton">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const suggestions = document.getElementById('suggestions');
+
+        function addMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = type === 'user' ? escapeHtml(content) : formatMarkdown(content);
+
+            messageDiv.appendChild(contentDiv);
+            chatMessages.insertBefore(messageDiv, typingIndicator);
+            scrollToBottom();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatMarkdown(text) {
+            return text
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function setLoading(isLoading) {
+            sendButton.disabled = isLoading;
+            messageInput.disabled = isLoading;
+            typingIndicator.classList.toggle('active', isLoading);
+            if (isLoading) scrollToBottom();
+        }
+
+        async function sendMessage(message) {
+            if (!message.trim()) return;
+
+            if (suggestions) suggestions.style.display = 'none';
+
+            addMessage(message, 'user');
+            messageInput.value = '';
+            setLoading(true);
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: Date.now().toString(),
+                        method: 'message/send',
+                        params: {
+                            message: {
+                                role: 'user',
+                                parts: [{ kind: 'text', text: message }]
+                            }
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                const data = await response.json();
+
+                if (data.result && data.result.artifacts && data.result.artifacts.length > 0) {
+                    addMessage(data.result.artifacts[0].parts[0].text, 'agent');
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                addMessage('Error: ' + error.message + '. Check that GRADIENT_MODEL_ACCESS_KEY is set.', 'error');
+            } finally {
+                setLoading(false);
+                messageInput.focus();
+            }
+        }
+
+        function sendSuggestion(text) {
+            messageInput.value = text;
+            sendMessage(text);
+        }
+
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendMessage(messageInput.value);
+        });
+
+        messageInput.focus();
+    </script>
+</body>
+</html>
