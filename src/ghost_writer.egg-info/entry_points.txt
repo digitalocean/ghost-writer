@@ -1,2 +1,0 @@
-[console_scripts]
-gw-tui = tui:run_tui
