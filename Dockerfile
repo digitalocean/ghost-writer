@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir \
     click==8.3.1 \
     textual==8.0.1
 
+RUN printf '#!/usr/bin/env bash\ncd /app && exec python __main__.py chat "$@"\n' > /opt/gw-tui.sh \
+    && chmod +x /opt/gw-tui.sh
+
 RUN useradd -r -s /bin/false appuser && chown -R appuser:appuser /app
 USER appuser
 
